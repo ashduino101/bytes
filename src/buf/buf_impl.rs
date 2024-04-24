@@ -7,6 +7,10 @@ use crate::{panic_advance, panic_does_not_fit};
 
 #[cfg(feature = "std")]
 use std::io::IoSlice;
+#[cfg(feature = "std")]
+use std::string::String;
+#[cfg(feature = "std")]
+use std::string::ToString;
 
 use alloc::boxed::Box;
 
@@ -1216,6 +1220,112 @@ pub trait Buf {
         Self: Sized,
     {
         reader::new(self)
+    }
+
+    // Functions used by WebAssetStudio
+
+    /// Get a little- or big-endian i16 from the stream.
+    fn get_i16_ordered(&mut self, little_endian: bool) -> i16 {
+        if little_endian { self.get_i16_le() } else { self.get_i16() }
+    }
+
+    /// Get a little- or big-endian u16 from the stream.
+    fn get_u16_ordered(&mut self, little_endian: bool) -> u16 {
+        if little_endian { self.get_u16_le() } else { self.get_u16() }
+    }
+
+    /// Get a little- or big-endian i32 from the stream.
+    fn get_i32_ordered(&mut self, little_endian: bool) -> i32 {
+        if little_endian { self.get_i32_le() } else { self.get_i32() }
+    }
+
+    /// Get a little- or big-endian u32 from the stream.
+    fn get_u32_ordered(&mut self, little_endian: bool) -> u32 {
+        if little_endian { self.get_u32_le() } else { self.get_u32() }
+    }
+
+    /// Get a little- or big-endian f32 from the stream.
+    fn get_f32_ordered(&mut self, little_endian: bool) -> f32 {
+        if little_endian { self.get_f32_le() } else { self.get_f32() }
+    }
+
+    /// Get a little- or big-endian i64 from the stream.
+    fn get_i64_ordered(&mut self, little_endian: bool) -> i64 {
+        if little_endian { self.get_i64_le() } else { self.get_i64() }
+    }
+
+    /// Get a little- or big-endian u64 from the stream.
+    fn get_u64_ordered(&mut self, little_endian: bool) -> u64 {
+        if little_endian { self.get_u64_le() } else { self.get_u64() }
+    }
+
+    /// Get a little- or big-endian f64 from the stream.
+    fn get_f64_ordered(&mut self, little_endian: bool) -> f64 {
+        if little_endian { self.get_f64_le() } else { self.get_f64() }
+    }
+
+    /// Get a varint from the stream.
+    fn get_varint(&mut self) -> i64 {
+        let mut result: i64 = 0;  // limit to 64 bit
+        let mut bits_read: usize = 0;
+        let mut value;
+        loop {
+            value = self.get_u8();
+            result |= ((value & 0x7f) << bits_read) as i64;
+            bits_read += 7;
+            if (value & 0x80) != 0x80 {
+                break;
+            }
+        }
+        result
+    }
+
+    /// Based on the start length, align to a certain number of bytes.
+    fn align(&mut self, start_length: usize, i: u8) {
+        let offset = start_length - self.remaining();
+        let modulo = offset % (i as usize);
+        if modulo != 0 {
+            self.advance((i as usize) - modulo);
+        }
+    }
+
+    /// Get a specified number of characters from the stream as a String.
+    #[cfg(feature = "std")]
+    fn get_chars(&mut self, cnt: usize) -> String {
+        let data = self.copy_to_bytes(cnt);
+        String::from_utf8(data.to_vec()).expect("invalid string")
+    }
+
+    /// Get a little-endian uint32-prefixed string from the stream.
+    fn get_string(&mut self) -> String {
+        let len = self.get_u32_le() as usize;
+        self.get_chars(len)
+    }
+
+    /// Get a little or big-endian uint32-prefixed string from the stream.
+    fn get_string_ordered(&mut self, little_endian: bool) -> String {
+        let len = self.get_u32_ordered(little_endian) as usize;
+        self.get_chars(len)
+    }
+
+    /// Get a varint-prefixed string from the stream.
+    fn get_string_varint(&mut self) -> String {
+        let len = self.get_varint() as usize;
+        self.get_chars(len)
+    }
+
+    /// Get a null-terminated string from the stream.
+    fn get_cstring(&mut self) -> String {
+        let mut c;
+        let mut data = "".to_string();
+        loop {
+            c = self.get_u8();
+            if c == 0 {
+                break;
+            }
+            data.push(char::from(c));
+        }
+        data.to_string()
     }
 }
 
