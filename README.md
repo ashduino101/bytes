@@ -2,6 +2,8 @@
 
 A utility library for working with bytes.
 
+**Fork for use in WebAssetStudio**.
+
 [![Crates.io][crates-badge]][crates-url]
 [![Build Status][ci-badge]][ci-url]
 
