@@ -1294,7 +1294,7 @@ pub trait Buf {
     #[cfg(feature = "std")]
     fn get_chars(&mut self, cnt: usize) -> String {
         let data = self.copy_to_bytes(cnt);
-        String::from_utf8(data.to_vec()).expect("invalid string").split("\0").nth(0).unwrap().to_string()
+        String::from_utf8_lossy(&data[..]).split("\0").nth(0).unwrap().to_string()
     }
 
     /// Get a little-endian uint32-prefixed string from the stream.
